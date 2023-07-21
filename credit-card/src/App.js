@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, Input, Select } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Input, Select, useToast } from '@chakra-ui/react';
 import './App.css';
 import CreditCard from './Components/CreditCard';
 import { useState } from 'react';
@@ -12,71 +12,110 @@ const credentials = {
 }
 function App() {
   const [cardDetails, setCardDetails] = useState(credentials)
-
+  const toast = useToast()
   const handleChange = (e) => {
-    const { name, value } = e.target
-    if (!value) return 
+    let { name, value } = e.target
+    if (value == -1) return
+
+    // validation only numbers in cardholder name
+    if (name == 'cardHolderName') {
+      const pattern = /^[A-Za-z]+$/
+      if (!pattern.test(value)) return
+    }
+    // validating card number 
+    if (name == 'cardNumber'|| name=='cvv') {
+      if(!Number(value))return
+    }
+
     setCardDetails({
       ...cardDetails,
       [name]:value
     })
   }
 
-  const handleClick = () => {
-    console.log(cardDetails)
+  const validateNumber = (e, maxLength) => {
+    if(e.target.value.length>maxLength)e.target.value=e.target.value.slice(0,maxLength)
+  }
+  const handlePay = () => {
+    for (let k in cardDetails) {
+      if (!cardDetails[k]) {
+        toast({
+          title: `All Fields are required`,
+          description: `please fill ${k} details to proceed`,
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+          position:"top"
+        })
+        return 
+      }
+    }
+    toast({
+      title: `Payment Successfull`,
+      description: `Thankyou for Paying 200000`,
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+      position:'top'
+    })
   }
 
 
   return (
     // page-container
-    <Flex border={'1px solid red'} justifyContent={'center'} alignItems={'center'} h='100vh'>
+    <Flex justifyContent={'center'} alignItems={'center'} h='100vh'>
 
       {/* credit-card && form contaniner */}
-      <Flex w='90%' border={'2px solid blue'} h='80%'>
+      <Flex w='90%'h='80%'>
 
         {/* credit-card-container */}
-        <Flex w='50%' border={'1px solid'} justifyContent={'center'} alignItems={'center'}>
-          <CreditCard />
+        <Flex w='50%' justifyContent={'center'} alignItems={'center'}>
+          <CreditCard
+            cardHolderName={cardDetails.cardHolderName}
+            cardNumber={cardDetails.cardNumber}
+            cvv={cardDetails.cvv}
+            expMonth={cardDetails.expMonth}
+            expYear={cardDetails.expYear} />
         </Flex>
         {/* credit-card-container */}
 
         {/* credit-card-form-container */}
-        <Flex direction='column' border={'2px solid red'} w='50%' m='auto' p='2rem' gap='3rem'>
+        <Flex direction='column' border={'1px solid rgba(0,0,0,.5)'} w='50%' m='auto' p='2rem' gap='3rem'>
           <Heading >Payment Details</Heading>
 
           <Flex direction={'column'} gap='2rem '>
             <Box>
-              <label style={{color:'red'}} htmlFor='card-holder'>CARDHOLDER NAME</label>
-              <Input onChange={handleChange} value={cardDetails.cardHolderName} variant='flushed' borderBottom={'1px solid red'} name='cardHolderName' type='text' id='card-holder' placeholder='Enter Cardholder Name' />
+              <label style={{color:'darkBlue'}} htmlFor='card-holder'>CARDHOLDER NAME</label>
+              <Input onChange={handleChange} type='text' value={cardDetails.cardHolderName} variant='flushed' borderBottom={'1px solid darkBlue'} name='cardHolderName'  id='card-holder' placeholder='Enter Cardholder Name' />
             </Box>
 
             <Box>
-              <label style={{color:'red'}} htmlFor='card-number'>CARD NUMBER</label>
-              <Input onChange={handleChange} value={cardDetails.cardNumber} variant='flushed' borderBottom={'1px solid red'} name='cardNumber' type='number' id='card-number' placeholder='Enter Card Number' />
+              <label style={{color:'darkBlue'}} htmlFor='card-number'>CARD NUMBER</label>
+              <Input onChange={handleChange} value={cardDetails.cardNumber} variant='flushed' borderBottom={'1px solid darkBlue'} onInput={(e)=>validateNumber(e,16)} name='cardNumber' type='number' id='card-number' placeholder='Enter Card Number' />
             </Box>
 
             <Flex justifyContent={'space-between'}>
 
               <Box>
-                <label style={{color:'red'}} htmlFor='exp-month'>EXPIRY MONTH</label>
+                <label style={{color:'darkBlue'}} htmlFor='exp-month'>EXPIRY MONTH</label>
                 <Select onChange={handleChange} value={cardDetails.expMonth} name='expMonth' id='exp-month'>
-                  <option value={null}>MM</option>
+                  <option value={-1}>MM</option>
                   {
-                    new Array(12).fill(0).map((_, i) => <option value={i < 9 ? `0${i + 1}` : i + 1}>{i < 9 ? `0${i + 1}` : i + 1}</option>)
+                    new Array(12).fill(0).map((_, i) => <option key={i} value={i < 9 ? `0${i + 1}` : i + 1}>{i < 9 ? `0${i + 1}` : i + 1}</option>)
                   }
                   
                 </Select>
               </Box>
               
               <Box>
-                <label style={{color:'red'}} htmlFor='exp-year'>EXPIRY YEAR</label>
+                <label style={{color:'darkBlue'}} htmlFor='exp-year'>EXPIRY YEAR</label>
                 <Select onChange={handleChange} value={cardDetails.expYear} name="expYear" id='exp-year'>
-                  <option value={null}>YY</option>
+                  <option value={-1}>YY</option>
                   {
                     new Array(12).fill(0).map((el, i) => {
                       let current = 23
                       return (
-                        <option value={`20${current+i}`}>20{current + i}</option>
+                        <option key={i} value={`20${current+i}`}>20{current + i}</option>
                       )
                     })
                   }
@@ -84,14 +123,14 @@ function App() {
               </Box>
 
               <Box>
-                <label style={{color:'red'}} htmlFor='cvv'>CVV</label>
-                <Input onChange={handleChange} name='cvv' value={cardDetails.cvv} id='cvv' type='number' placeholder='CVV' />
+                <label style={{color:'darkBlue'}} htmlFor='cvv'>CVV</label>
+                <Input onChange={handleChange} name='cvv' onInput={(e)=>validateNumber(e,3)} value={cardDetails.cvv} id='cvv' type='number' inputMode='numeric' placeholder='CVV' />
               </Box>
             </Flex>
           </Flex>
           
           <Heading>Payment Amount : 200000</Heading>
-          <Button onClick={handleClick} colorScheme='red'>Pay</Button>
+          <Button onClick={handlePay} colorScheme='red'>PAY</Button>
         </Flex>
         {/* credit-card-form-container */}
 
